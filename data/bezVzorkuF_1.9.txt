@@ -1,0 +1,4 @@
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\bezVzorku\F#_1.9\central_0.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\bezVzorku\F#_1.9\off_1.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\bezVzorku\F#_1.9\off_2.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\bezVzorku\F#_1.9\off_3.bmp

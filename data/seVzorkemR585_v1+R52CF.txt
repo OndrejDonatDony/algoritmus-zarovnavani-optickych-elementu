@@ -1,0 +1,14 @@
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\7CF_z-0.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\1CF_x+1.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\2CF_x+2.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\3CF_y+3.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\4CF_z+15.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\5CF_z+10.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\6CF_z+5.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\8CF_z-10_x+1.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\9CF_z-10_x+3.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\CF_z-10.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\CF_z-15_x+2.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\CF_z-20_x+2.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\CF_z-30_x+1.5.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\R585_v1+R52\CF\CF_z-30_x+2.bmp

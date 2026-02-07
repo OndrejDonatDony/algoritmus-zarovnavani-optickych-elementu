@@ -1,0 +1,10 @@
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.01.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.02.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.005.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.05.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.10.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.20.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B+0.50.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_B-0.07.bmp
+C:\Users\ondre\Desktop\BAKALÁŘKA\BakalarniPrace\data\seVzorkem\Zygo_flat_4+flat\CF_C+0.07.bmp
