@@ -72,7 +72,7 @@
             }
             else
             {
-                (Spot? sampleComplete, float zAx) = SpotUtils.SampleZAxisDistance(sampleNoShift, sample);
+                (Spot? sampleComplete, float zAx) = SpotUtils.SampleZAxisDistance(sampleNoShift, sample, center.GetRadius);
                 if (sampleComplete != null)
                 {
                     Console.WriteLine($"vzorek je ve vzdalenosti {sampleDistance:F4}");

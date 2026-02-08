@@ -274,13 +274,30 @@ public static class SpotUtils
 
         return (spots, numOfSpots);
     }
-
-    public static (Spot? , float) SampleZAxisDistance(Spot sampleNoShift, Spot sampleShift)
+    //vzorek se posune +Z
+    public static (Spot? , float) SampleZAxisDistance(Spot sampleNoShiftZ, Spot sampleShiftZ, float centerRadius)
     {
         float zDistance = 0f;
+        if (sampleShiftZ.GetRadius <= centerRadius)
+        {
+            zDistance = 0f;
+            return (sampleShiftZ, zDistance);
+        }
 
+        float RVS = sampleNoShiftZ.GetRadius; //radius sample shift 
+        float RV = sampleNoShiftZ.GetRadius; //radius sample
+        float RC = centerRadius; //radius of center spot
 
+        float zValue = 0.01f; //Z shift from interferometer
 
-        return (sampleShift, zDistance);
+        if (RV < RVS){
+            zDistance = zValue * (RC - RVS) / (RV - RVS);
+        }
+        else
+        {
+            zDistance = -zValue * (RC - RVS) / (RV - RVS);
+        }
+
+        return (sampleShiftZ, zDistance);
     }
 }
