@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36623.8
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AligningOpticalElements", "AligningOpticalElements.csproj", "{B19A0667-BED7-BC66-38B8-F48D9E9B9AE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpticalElementsSimulator", "..\OpticalElementsSimulator\OpticalElementsSimulator.csproj", "{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B19A0667-BED7-BC66-38B8-F48D9E9B9AE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B19A0667-BED7-BC66-38B8-F48D9E9B9AE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B19A0667-BED7-BC66-38B8-F48D9E9B9AE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B19A0667-BED7-BC66-38B8-F48D9E9B9AE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {38738E93-A96F-4564-A970-F50836CE652F}
+	EndGlobalSection
+EndGlobal
