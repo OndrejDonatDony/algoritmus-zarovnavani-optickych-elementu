@@ -1,121 +1,139 @@
 ﻿using OpenCvSharp;
 using static OpenCvSharp.FileStorage;
 using static OpenCvSharp.ML.DTrees;
+
 namespace AligningOpticalElements;
+
 public class OpticalElementsAligner
 {
-    public (List<Spot>, int, List<int>) ReferenceSpot(Mat img)
+    private List<Spot> spots;
+    private int numOfSpots = 0;
+    private Spot sampleSpot;
+    private Spot refSpot;
+    private List<Spot> sampleSpots;
+    private List<int> distances;
+    private bool sampleFound;
+    private int stateOfPosition = -1;
+
+    public Spot GetRefSpot { get { return refSpot; } }
+    public Spot GetSampleSpot { get { return sampleSpot; } }
+    public int GetNumOfSpots { get { return numOfSpots; } }
+    public List<Spot> GetSpots { get { return spots; } }
+    public List<Spot> GetSampleSpots { get { return sampleSpots; } }
+    public List<int> GetDistances { get { return distances; } }
+    public bool GetSampleFound { get { return sampleFound; } }
+    public int GetStateOfPosition { get { return stateOfPosition; } }
+    public int GetShift { get; set; }
+
+    public void ReferenceSpot(Mat img)
     {
+        List<int> distances = new List<int>();
 
-        List<Spot> spots = new List<Spot>();
-        List<int> distance = new List<int>();
-
-        (spots, int numOfSpots) = LoadSpots(img);
-        if (numOfSpots == 0)
+        LoadSpots(img);
+        if (GetNumOfSpots == 0)
         {
             throw new Exception("nenasly se zadne body");
         }
-        else if (numOfSpots == 1)
-        {
-            return (spots,numOfSpots, distance);
-        }
-        else if (numOfSpots > 2)
+        else if (GetNumOfSpots > 2)
         {
             throw new Exception("prilis mnoho bodu");
         }
 
-        foreach(Spot sp in spots)
+        foreach (Spot sp in GetSpots)
         {
             int x = img.Width / 2 - sp.GetCoordX;
             int y = img.Height / 2 - sp.GetCoordY;
-            distance.Add(x * x + y * y);
+            distances.Add(x * x + y * y);
         }
-        if (distance[0] < distance[1])
+
+        if (GetNumOfSpots == 2)
         {
-            return (spots,numOfSpots, distance);
+            if (distances[0] > distances[1])
+            {
+                (this.spots[0], this.spots[1]) = (this.spots[1], this.spots[0]);
+                (distances[0], distances[1]) = (distances[1], distances[0]);
+            }
         }
-        else
-        {
-            (spots[0],spots[1]) = (spots[1], spots[0]);
-            return (spots, numOfSpots, distance);
-        }
-       
+
+        this.refSpot = this.spots[0];
+        this.distances = distances;
     }
-    public (Spot?,bool) SampleSpot(Mat img, List<Spot> spots, int refNumOfSpots, List<int> distance)
+
+    public void SampleSpot(Mat img)
     {
         bool sampleFound = false;
-        List<Spot> spotsWithSample = new List<Spot>();
-        (spotsWithSample, int numOfSpots) = LoadSpots(img);
+        int refNumOfSpots = this.numOfSpots;
+        List<int> refDistances = new List<int>(this.distances);
 
-        if (numOfSpots == refNumOfSpots)
+        LoadSpots(img);
+
+        if (GetNumOfSpots == refNumOfSpots)
         {
             Console.WriteLine("je potreba posunout vzorek");
-            return (null, sampleFound);
+            this.sampleFound = sampleFound;
+            this.sampleSpot = null;
+            return;
         }
-        else if (numOfSpots == refNumOfSpots+1)
+        else if (GetNumOfSpots == refNumOfSpots + 1)
         {
             List<int> tempDistance = new List<int>();
-            foreach (Spot sp in spots)
+
+            foreach (Spot sp in GetSpots)
             {
                 int x = img.Width / 2 - sp.GetCoordX;
                 int y = img.Height / 2 - sp.GetCoordY;
                 tempDistance.Add(x * x + y * y);
             }
-            List<int> lowDiffDistAll = new List<int>();
-            int k = 0;
-            int lowDiffDist = 0;
-            for(int i = 0; i < tempDistance.Count; i++)
-            {
-                for(int j = 0; j < distance.Count; j++)
-                {
-                    if(Math.Abs(tempDistance[i] - distance[j]) < k)
-                    {
-                        k = Math.Abs(tempDistance[i] - distance[j]);
-                        lowDiffDist = tempDistance[i]; 
-                    }
 
-                }
-                k = 0;
-                lowDiffDistAll.Add(lowDiffDist);
-            }
-            k = 0;
-            int count = 0;
-            for(int i = 0;i < lowDiffDistAll.Count; i++)
+            int maxDiff = -1;
+            int sampleIndex = -1;
+
+            for (int i = 0; i < tempDistance.Count; i++)
             {
-                if (lowDiffDistAll[i] > k)
+                int minDiff = int.MaxValue;
+
+                for (int j = 0; j < refDistances.Count; j++)
                 {
-                    k = lowDiffDistAll[i];
-                    count++;
+                    int diff = Math.Abs(tempDistance[i] - refDistances[j]);
+                    if (diff < minDiff)
+                    {
+                        minDiff = diff;
+                    }
+                }
+
+                if (minDiff > maxDiff)
+                {
+                    maxDiff = minDiff;
+                    sampleIndex = i;
                 }
             }
-            sampleFound = true;
-            return (spotsWithSample[count],sampleFound);
+
+            if (sampleIndex >= 0)
+            {
+                sampleFound = true;
+                this.sampleSpot = GetSpots[sampleIndex];
+                this.sampleFound = sampleFound;
+                return;
+            }
         }
-        else
-        {
-            Console.WriteLine("neco se pokazilo");
-            return (null, sampleFound);
-        }
-     
+
+        Console.WriteLine("neco se pokazilo");
+        this.sampleFound = sampleFound;
+        this.sampleSpot = null;
     }
-    
-    protected (List<Spot>, int) LoadSpots(Mat img)
+
+    protected void LoadSpots(Mat img)
     {
         List<Spot> spots = new List<Spot>();
 
         if (img == null || img.Empty())
-            return (spots, 0);
-
-        int W = img.Width;
-        int H = img.Height;
-
-        Mat bin = img;
-        if (bin.Type() != MatType.CV_8UC1)
         {
-            bin = new Mat();
-            Cv2.CvtColor(img, bin, ColorConversionCodes.BGR2GRAY);
-            Cv2.Threshold(bin, bin, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+            this.spots = spots;
+            this.numOfSpots = 0;
+            return;
         }
+
+        Mat bin = BinaryImg(img);
 
         Cv2.FindContours(
             bin,
@@ -148,25 +166,45 @@ public class OpticalElementsAligner
                 numOfSpots++;
                 spots.Add(new Spot(xImg, yImg, radiusPx, 0f));
             }
-
         }
 
-        return (spots, numOfSpots);
+        this.numOfSpots = numOfSpots;
+        this.spots = spots;
     }
+
+    public string SampleMoveXY()
+    {
+        this.stateOfPosition = GetStateOfPosition + 1;
+        if(GetStateOfPosition == 9)
+        {
+            return "spatne nastaveny posun";
+        }
+
+        (int dx, int dy)[] N8 =
+        {
+        (-GetShift, -GetShift), (0, -GetShift), (GetShift, -GetShift),
+        (-GetShift, 0),                    (GetShift, 0),
+        (-GetShift, GetShift),  (0, GetShift),  (GetShift, GetShift)
+    };
+
+        var move = N8[GetStateOfPosition];
+        return $"MOVE {move.dx} {move.dy}";
+    }
+
     //vzorek se posune +Z
-    public Spot? SampleZAxisDistance(Spot sampleNoShiftZ, Spot sampleShiftZ, int centerRadius)
+    public void SampleZAxisDistance()
     {
         float zDistance = 0f;
-        if (sampleShiftZ.GetRadius <= centerRadius)
+        if (sampleSpot.GetRadius <= refSpot.GetRadius)
         {
             zDistance = 0f;
-            sampleShiftZ.SetCoordZ(zDistance);
-            return sampleShiftZ;
+            sampleSpot.GetCoordZ = zDistance;
+            return;
         }
 
-        float RVS = sampleNoShiftZ.GetRadius; //radius sample shift 
-        float RV = sampleNoShiftZ.GetRadius; //radius sample
-        float RC = centerRadius; //radius of center spot
+        float RVS = sampleSpot.GetRadius; //radius sample shift 
+        float RV = this.sampleSpot.GetRadius; //radius sample
+        float RC = refSpot.GetRadius; //radius of center spot
 
         float zValue = 0.01f; //Z shift from interferometer
 
@@ -178,11 +216,10 @@ public class OpticalElementsAligner
         {
             zDistance = -zValue * (RC - RVS) / (RV - RVS);
         }
-        sampleShiftZ.SetCoordZ(zDistance);
-        return sampleShiftZ;
+        sampleSpot.GetCoordZ = zDistance;
     }
-    
-    protected static Mat ToGray(Mat img)
+
+    protected Mat ToGray(Mat img)
     {
         // Pokud uz je grayscale, jen vrat kopii
         if (img.Channels() == 1)
@@ -198,7 +235,7 @@ public class OpticalElementsAligner
 
     // MATLAB logika: nnz(G>1) < 1500 ? (G>1) : najdi TH (1..255) kde nnz(BW)<1500
     // potom bwareaopen(BW,3)
-    protected static Mat BinaryImg(Mat img)
+    protected Mat BinaryImg(Mat img)
     {
         Mat g = ToGray(img);
 
@@ -234,7 +271,7 @@ public class OpticalElementsAligner
     }
 
     // Odstrani komponenty s plochou < minArea
-    protected static Mat AreaOpen(Mat bw, int minArea)
+    protected Mat AreaOpen(Mat bw, int minArea)
     {
         Mat labels = new Mat();
         Mat stats = new Mat();
@@ -260,12 +297,10 @@ public class OpticalElementsAligner
             mask.Dispose();
         }
 
-
         labels.Dispose();
         stats.Dispose();
         centroids.Dispose();
 
         return cleaned;
     }
-
 }

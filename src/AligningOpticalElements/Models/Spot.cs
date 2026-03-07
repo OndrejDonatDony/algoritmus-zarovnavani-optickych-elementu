@@ -1,12 +1,13 @@
 ﻿using OpenCvSharp;
+
 namespace AligningOpticalElements;
+
 public class Spot
 {
     private int coordX;
     private int coordY;
     private float coordZ;
     private int radius;
-
 
     // konstruktor
     public Spot(int coordX, int coordY, int radius, float coordZ)
@@ -20,34 +21,25 @@ public class Spot
     // getter a setter
     public int GetCoordX
     {
-        get 
-        { 
-            return coordX; 
-        }
+        get { return coordX; }
+        set { coordX = value; }
     }
+
     public int GetCoordY
     {
-        get
-        {
-            return coordY;
-        }
+        get { return coordY; }
+        set { coordY = value; }
     }
+
     public float GetCoordZ
     {
-        get
-        {
-            return coordZ;
-        }
+        get { return coordZ; }
+        set { coordZ = value; }
     }
+
     public int GetRadius
     {
-        get
-        {
-            return radius;
-        }
-    }
-    public void SetCoordZ(float coordZ)
-    {
-        this.coordZ = coordZ;
+        get { return radius; }
+        set { radius = value; }
     }
 }

@@ -3,7 +3,6 @@ using OpenCvSharp;
 using OpticalElementsSimulator.SimulatorUtils;
 using static System.Net.Mime.MediaTypeNames;
 using System.Text;
-using OpticalElementsSimulator.Models;
 
 //5.248px = 1mm
 //243.9025mm x 195.122mm
@@ -27,45 +26,33 @@ class Program
         AlignZ,
         Test
     }
-    
+
     static void Main()
     {
-        
         int hExternal = 2048;
         int wExternal = 2560;
 
         //test
-        hExternal = 1224;
-        wExternal = 1480;
+        //hExternal = 1224;
+        //wExternal = 1480;
 
         int hInternal = 1024;
         int wInternal = 1280;
 
-
-
         int noise = 30;
-        int rr = 50;
+        int rr = 20;
         int rs = 20;
+
 
         //real
         var aligner = new OpticalElementsAligner();
-        List<Spot> spots = null;
-        int numOfSpots = 0;
-        Spot sample = null;
+
+        Console.WriteLine("nastav posun");
+        String shiftCommand = Console.ReadLine();
+        aligner.GetShift = int.Parse(shiftCommand);
 
         //sim
         var sim = new SimulatorUtils();
-        List<int> distance = new List<int>();
-        Spot spotRefSim = null;
-        Spot spotSampleSim = null;
-        Mat imageRef = new Mat();
-        Mat imageSample = new Mat();
-
-        //trim
-        Spot spotRefSimTrim = null;
-        Spot spotSampleSimTrim = null;
-        Mat imageRefTrim = new Mat();
-        Mat imageSampleTrim = new Mat();
 
         AlignState sw = AlignState.MainMenu;
         bool endProgram = false;
@@ -73,12 +60,11 @@ class Program
 
         do
         {
-            //0 sim, 1 Intr
             switch (sw)
             {
                 case AlignState.MainMenu:
                     MainMenu();
-                    string ?choiceCon = Console.ReadLine();
+                    string? choiceCon = Console.ReadLine();
                     int choice = int.Parse(choiceCon);
                     switch (choice)
                     {
@@ -99,44 +85,48 @@ class Program
 
                 case AlignState.SimulationImages:
                     simulation = true;
-                    (spotRefSim, imageRef, spotRefSimTrim, imageRefTrim) = sim.ReferenceImage(
-                       hExternal, wExternal,
-                       hInternal, wInternal,
-                       noise, rr);
 
-                    (spotSampleSim, imageSample, spotSampleSimTrim, imageSampleTrim) = sim.SampleImage(
-                       hExternal, wExternal,
-                       hInternal, wInternal, imageRef, rs);
+                    sim.ReferenceImageRand(
+                        hExternal, wExternal,
+                        hInternal, wInternal,
+                        noise, rr);
+
+                    sim.SampleImageRand(
+                        hExternal, wExternal,
+                        hInternal, wInternal, rs);
 
                     sw = AlignState.ReferenceImage;
 
-                    ShowReferenceImage(imageRef, spotRefSim);
-                    ShowSampleImage(imageSample, spotRefSim, spotSampleSim);
+                    //nahled
+                    ShowReferenceImage(sim.GetImageRef, sim.GetSpotRef);
+                    ShowSampleImage(sim.GetImageSample, sim.GetSpotRef, sim.GetSpotSample);
 
-                    ShowReferenceImage(imageRefTrim, spotRefSimTrim);
-                    ShowSampleImage(imageSampleTrim, spotRefSimTrim, spotSampleSimTrim);
+                    ShowReferenceImage(sim.GetImageRefTrim, sim.GetSpotRefTrim);
+                    ShowSampleImage(sim.GetImageSampleTrim, sim.GetSpotRefTrim, sim.GetSpotSampleTrim);
 
                     break;
 
                 case AlignState.ReferenceImage:
-                    (spots, numOfSpots, distance) = aligner.ReferenceSpot(imageRefTrim); //zmensit 
+                    aligner.ReferenceSpot(sim.GetImageRefTrim);
                     sw = AlignState.SampleImage;
                     break;
 
                 case AlignState.SampleImage:
-                    (sample, bool spotFound) = aligner.SampleSpot(imageSampleTrim,spots, numOfSpots, distance);
-                    if (spotFound)
+                    aligner.SampleSpot(sim.GetImageSampleTrim);
+                    if (aligner.GetSampleFound)
                     {
                         sw = AlignState.AlignZ;
                     }
                     else
                     {
+                        Console.WriteLine(aligner.SampleMoveXY());
                         sw = AlignState.AlignXY;
                     }
                     break;
 
                 case AlignState.AlignXY:
-                    //posun
+                    //posun, chovani interferometru vs simulace, mm? pouze img jako vstup, 
+                    sim.SimSampleMoveXY(aligner.GetShift,aligner.GetStateOfPosition);
                     sw = AlignState.SampleImage;
                     break;
 
@@ -148,17 +138,15 @@ class Program
 
                 case AlignState.Test:
                     //vzit v potaz zakazanou oblast a odecist od souradnic
-                    Result(sample, spotSampleSim, simulation);
+                    Result(aligner.GetSampleSpot, sim.GetSpotSample, simulation);
                     endProgram = true;
                     break;
             }
-        
+
         }
         while (!endProgram);
-
-
-
     }
+
     public static void MainMenu()
     {
         StringBuilder sb = new StringBuilder();
@@ -167,6 +155,7 @@ class Program
 
         Console.WriteLine(sb.ToString());
     }
+
     public static void Result(Spot spot, Spot spotSim, bool simulation)
     {
         StringBuilder sb = new StringBuilder();
