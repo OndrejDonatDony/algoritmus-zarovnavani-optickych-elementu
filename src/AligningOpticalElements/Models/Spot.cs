@@ -19,27 +19,12 @@ public class Spot
     }
 
     // getter a setter
-    public int GetCoordX
-    {
-        get { return coordX; }
-        set { coordX = value; }
-    }
+    public int GetCoordX { get { return coordX; } }
 
-    public int GetCoordY
-    {
-        get { return coordY; }
-        set { coordY = value; }
-    }
-
-    public float GetCoordZ
-    {
-        get { return coordZ; }
-        set { coordZ = value; }
-    }
-
-    public int GetRadius
-    {
-        get { return radius; }
-        set { radius = value; }
-    }
+    public int GetCoordY { get { return coordY; } }
+   
+    public float GetCoordZ { get { return coordZ; } }
+    
+    public int GetRadius { get { return radius; } }
+    
 }
