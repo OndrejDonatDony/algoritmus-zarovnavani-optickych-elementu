@@ -88,6 +88,7 @@ namespace OpticalElementsSimulator.SimulatorUtils
             int sampleX = rnd.Next(0, imgSamp.Width);
             int sampleY = rnd.Next(0, imgSamp.Height);
             int radius = rnd.Next(10, r); //polomer
+            radius = 300;
             float sampleZ = rnd.Next(0, 200) - 100;
             if (sampleZ >= 0) sampleZ += 1;
 
@@ -190,9 +191,7 @@ namespace OpticalElementsSimulator.SimulatorUtils
 
                     if (d2 <= r2)
                     {
-                        double w = radius;
-
-                        double value = 255.0 * Math.Exp(-2.0 * d2 / (w * w)) / (rnd.Next(1, 4))*Math.Sqrt(radius/10)/(radius/10);
+                        double value = 255.0 * Math.Exp(-1.0 * d2 / (radius * radius)) / (rnd.Next(1, 3))*Math.Sqrt(radius/10)/(radius/10);
                         img.Set(y, x, (byte)value);
                     }
                 }

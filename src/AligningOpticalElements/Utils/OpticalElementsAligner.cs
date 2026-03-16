@@ -141,7 +141,6 @@ public class OpticalElementsAligner
 
         Console.WriteLine("neco se pokazilo ve vzorku");
         this.sampleFound = sampleFound;
-        this.sampleSpot = null;
     }
 
 
@@ -264,11 +263,12 @@ public class OpticalElementsAligner
             Cv2.Threshold(g, bw, th, 255, ThresholdTypes.Binary);
             int count = Cv2.CountNonZero(bw);
 
-            if (count < 800)
+            if (count < 15000)
             {
                 break;
             }
         }
+        ShowImage(bw);
         Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(7, 7));
         Mat dilated = new Mat();
         Cv2.Dilate(bw, dilated, kernel, iterations: 2);
@@ -326,7 +326,10 @@ public class OpticalElementsAligner
             return;
         }
 
-        Cv2.ImShow("Image", img);
-        Cv2.WaitKey(1);
+        using var small = new Mat();
+        Cv2.Resize(img, small, new Size(), 0.5, 0.5);
+
+        Cv2.ImShow("Reference", small);
+        Cv2.WaitKey();
     }
 }

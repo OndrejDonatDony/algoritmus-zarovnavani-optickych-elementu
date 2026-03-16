@@ -41,8 +41,8 @@ class Program
 
         int noise = 30;
         int rr = 20;
-        int rs = 100;
-        int ZS = 5;
+        int rs = 300;
+        int ZS = 50;
 
         //real
         var aligner = new OpticalElementsAligner();
@@ -50,7 +50,7 @@ class Program
         //Console.WriteLine("nastav posun XY");
         //String shiftCommand = Console.ReadLine();
         //aligner.GetSampleShiftXY = int.Parse(shiftCommand);
-        aligner.GetSampleShiftXY = 400;
+        aligner.GetSampleShiftXY = (wExternal-wInternal)/2+20;
         //Console.WriteLine("nastav posun Z");
         //String shiftZCommand = Console.ReadLine();
         //aligner.GetSampleShiftZ = int.Parse(shiftZCommand);
@@ -153,13 +153,7 @@ class Program
                         sim.GetImageSampleTrim.Width,
                         sim.GetImageSampleTrim.Height);
 
-                    //ShowReferenceImage(sim.GetImageRefTrim, sim.GetSpotRefTrim);
-                    ShowSampleImage(
-                        sim.GetImageSampleTrim,
-                        sim.GetSpotRefTrim,
-                        sim.GetSpotSampleTrim,
-                        sim.GetImageSampleTrim.Width,
-                        sim.GetImageSampleTrim.Height);
+
 
                     break;
 
@@ -167,8 +161,18 @@ class Program
                     //novy spot
                     //sample = aligner.SampleZAxisDistance(sample, Spot sampleShiftZ, spotRefSim.GetRadius);
                     sim.SimSampleMoveZ(ZS);
-                    aligner.SampleSpot(sim.GetImageSample, ZS);
+
+                    ShowSampleImage(
+                      sim.GetImageSample,
+                      sim.GetSpotRef,
+                      sim.GetSpotSample,
+                      sim.GetImageSampleTrim.Width,
+                      sim.GetImageSampleTrim.Height);
+
+                    aligner.SampleSpot(sim.GetImageSampleTrim, ZS);
                     sw = AlignState.Test;
+
+                  
                     break;
 
                 case AlignState.Test:
@@ -204,7 +208,7 @@ class Program
             sb.AppendLine($"X: {((spotSim.GetCoordX - borderW) / 5.248):F4} mm");
             sb.AppendLine($"Y: {((spotSim.GetCoordY - borderH) / 5.248):F4} mm");
             sb.AppendLine($"Z: {spotSim.GetCoordZ:F4} mm");
-            sb.AppendLine($"Radius: {spotSim.GetRadius:F4} mm");
+            sb.AppendLine($"Průměr: {spotSim.GetRadius*2/5.248:F4} mm");
             sb.AppendLine();
         }
 
@@ -214,7 +218,7 @@ class Program
             sb.AppendLine($"X: {(spot.GetCoordX / 5.248):F4} mm");
             sb.AppendLine($"Y: {(spot.GetCoordY / 5.248):F4} mm");
             sb.AppendLine($"Z: {spot.GetCoordZ:F4} mm");
-            sb.AppendLine($"Radius: {spot.GetRadius:F4} mm");
+            sb.AppendLine($"Průměr: {spot.GetRadius*2/5.248:F4} mm");
         }
         Console.WriteLine(sb.ToString());
     }
