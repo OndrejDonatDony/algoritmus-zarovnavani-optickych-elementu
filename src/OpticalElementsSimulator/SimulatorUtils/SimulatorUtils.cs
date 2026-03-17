@@ -144,16 +144,35 @@ namespace OpticalElementsSimulator.SimulatorUtils
         }
 
 
-        public void SimSampleMoveXY(int shift, int state)
+        public void SimSampleMoveXY(int shift, int state, int border)
         {
             List<Spot> spots = new List<Spot>();
-            (int dx, int dy)[] N8 =
+            (int dx, int dy)[] N8;
+
+            if (border > 0)
             {
-                (-shift,-shift), (shift,0), (shift,0),
-                (0, shift),          (0, shift),
-                (-shift, 0), (-shift, 0), (0, -shift)
-            };
-            this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[state].dx, sampleSpot.GetCoordY + N8[state].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
+                N8 = new (int dx, int dy)[]
+                 {
+                    (0,imageSampleTrim.Height / 2),
+                    (0,-imageSampleTrim.Height / 2),
+                    ( imageSampleTrim.Width  / 2,0),
+                    (-imageSampleTrim.Width  / 2,0)
+                };
+                this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[border-1].dx,
+                    sampleSpot.GetCoordY + N8[border-1].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
+            }
+            else
+            {
+                N8 = new (int dx, int dy)[]
+                {
+                (-shift, shift), (shift, 0), (shift, 0),
+                (0, -shift),                   (0,-shift),
+                (-shift, 0),  (-shift, 0),  (0, shift)
+                };
+                Console.WriteLine(state);
+                this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[state].dx,
+                    sampleSpot.GetCoordY + N8[state].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
+            }
             NewSampleImage();
         }
 

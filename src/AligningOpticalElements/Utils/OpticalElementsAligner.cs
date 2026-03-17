@@ -18,7 +18,8 @@ public class OpticalElementsAligner
     private bool sampleFound;
     private int stateOfPosition = -1;
     private int numOfFirstSpots;
-
+    private float px = 5.248f;
+    private int whiteBorder = -1;
     public Spot GetRefSpot { get { return refSpot; } }
     public Spot GetSampleSpot { get { return sampleSpot; } }
     public int GetNumOfFirstSpots { get { return numOfFirstSpots; } }
@@ -29,6 +30,12 @@ public class OpticalElementsAligner
     public List<int> GetDistances { get { return distances; } }
     public bool GetSampleFound { get { return sampleFound; } }
     public int GetStateOfPosition { get { return stateOfPosition; } }
+    public int GetWhiteBorder { get { return whiteBorder; } }
+    public float GetPx
+    {
+        get => px;
+        set => px = value;
+    }
     public int GetSampleShiftXY
     {
         get => sampleShiftXY;
@@ -39,7 +46,8 @@ public class OpticalElementsAligner
         get => sampleShiftZ;
         set => sampleShiftZ = value;
     }
-    
+   
+
 
     public void ReferenceSpot(Mat img)
     {
@@ -126,15 +134,34 @@ public class OpticalElementsAligner
             }
             if (GetSampleFound)
             {
-                this.sampleSpotShiftZ = GetSpots[sampleIndex];
-                SampleMoveZ(ZS);
-                return;
-            }
-            if (sampleIndex >= 0)
-            {
-                Console.WriteLine("vzorek se nasel");
-                this.sampleSpot = GetSpots[sampleIndex];
-                this.sampleFound = true;
+                
+                FindWhiteBorder(img);
+
+                if (GetWhiteBorder < 1 && sampleIndex >= 0)
+                {
+                    Console.WriteLine("vzorek se nasel");
+                    this.sampleSpot = GetSpots[sampleIndex];
+                    this.sampleFound = true;
+                    this.sampleSpotShiftZ = GetSpots[sampleIndex];
+                    SampleMoveZ(ZS);
+                    return;
+                }
+                int[] arr = new int[]
+                {
+                    -img.Height / 2,
+                     img.Height / 2,
+                     img.Width / 2,
+                    -img.Width / 2
+                };
+                string[] shiftInfo = new string[]
+                {
+                    (-img.Height / 2)/px + "mm dolu",
+                    ( img.Height / 2)/px + "mm nahoru",
+                    ( img.Width  / 2)/px + "mm doprava",
+                    (-img.Width  / 2)/px + "mm doleva"
+                };
+                Console.WriteLine("posunte vzorek o " + shiftInfo[GetWhiteBorder - 1]);
+                this.sampleFound = false;
                 return;
             }
         }
@@ -268,7 +295,6 @@ public class OpticalElementsAligner
                 break;
             }
         }
-        ShowImage(bw);
         Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(7, 7));
         Mat dilated = new Mat();
         Cv2.Dilate(bw, dilated, kernel, iterations: 2);
@@ -331,5 +357,65 @@ public class OpticalElementsAligner
 
         Cv2.ImShow("Reference", small);
         Cv2.WaitKey();
+    }
+    protected void FindWhiteBorder(Mat img)
+    {
+        if (img == null || img.Empty())
+        {
+            this.whiteBorder = -1;
+            return;
+        }
+
+        Mat bw = BinaryImg(img);
+
+        int rows = bw.Rows;
+        int cols = bw.Cols;
+
+        // 1 = nahoře
+        for (int x = 0; x < cols; x++)
+        {
+            if (bw.At<byte>(0, x) > 0)
+            {
+                this.whiteBorder = 1;
+                bw.Dispose();
+                return;
+            }
+        }
+
+        // 2 = dole
+        for (int x = 0; x < cols; x++)
+        {
+            if (bw.At<byte>(rows - 1, x) > 0)
+            {
+                this.whiteBorder = 2;
+                bw.Dispose();
+                return;
+            }
+        }
+
+        // 3 = vlevo
+        for (int y = 0; y < rows; y++)
+        {
+            if (bw.At<byte>(y, 0) > 0)
+            {
+                this.whiteBorder = 3;
+                bw.Dispose();
+                return;
+            }
+        }
+
+        // 4 = vpravo
+        for (int y = 0; y < rows; y++)
+        {
+            if (bw.At<byte>(y, cols - 1) > 0)
+            {
+                this.whiteBorder = 4;
+                bw.Dispose();
+                return;
+            }
+        }
+        this.whiteBorder = 0;
+        bw.Dispose();
+        return;
     }
 }
