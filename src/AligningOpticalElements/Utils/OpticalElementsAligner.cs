@@ -12,6 +12,9 @@ public class OpticalElementsAligner
     private Spot sampleSpotShiftZ = null;
     private int sampleShiftZ = 0;
     private int sampleShiftXY = 0;
+    private int whitePixels;
+    private int whitePixelsRef;
+    private int pixelsDiff;
 
     private List<Spot> sampleSpots;
     private List<int> distances;
@@ -31,6 +34,9 @@ public class OpticalElementsAligner
     public bool GetSampleFound { get { return sampleFound; } }
     public int GetStateOfPosition { get { return stateOfPosition; } }
     public int GetWhiteBorder { get { return whiteBorder; } }
+    public int GetWhitePixels { get { return whitePixels; } }
+    public int GetWhitePixelsRef { get { return whitePixelsRef; } }
+    public int GetPixelsDiff { get { return pixelsDiff; } }
     public float GetPx
     {
         get => px;
@@ -53,7 +59,7 @@ public class OpticalElementsAligner
     {
         List<int> distances = new List<int>();
 
-        LoadSpots(img);
+        this.whitePixelsRef = LoadSpots(img);
         if (GetNumOfSpots == 0)
         {
             throw new Exception("nenasly se zadne body");
@@ -87,19 +93,60 @@ public class OpticalElementsAligner
     public void SampleSpot(Mat img, float ZS)
     {
         bool sampleFound = false;
-    
-        
 
-        LoadSpots(img);
+        this.whitePixels = LoadSpots(img);
+        Console.WriteLine(GetNumOfFirstSpots + "first");
+        Console.WriteLine(GetNumOfSpots + "all");
+
         if (GetNumOfFirstSpots == GetNumOfSpots)
         {
-            Console.WriteLine("je potreba posunout vzorek");
-            this.sampleFound = sampleFound;
-            this.sampleSpot = null;
-            return;
+            FindWhiteBorder(img);
+            if(GetWhiteBorder > 0)
+            {
+                int[] arr = new int[]
+                {
+                    -img.Height / 2,
+                     img.Height / 2,
+                     img.Width / 2,
+                    -img.Width / 2
+                };
+                string[] shiftInfo = new string[]
+                {
+                    (-img.Height / 2)/px + "mm dolu",
+                    ( img.Height / 2)/px + "mm nahoru",
+                    ( img.Width  / 2)/px + "mm doprava",
+                    (-img.Width  / 2)/px + "mm doleva"
+                };
+                Console.WriteLine("posunte vzorek o " + shiftInfo[GetWhiteBorder - 1]);
+                return;
+            }
+      
+            int pixelsDiff = GetWhitePixels - GetWhitePixelsRef;
+            if(GetWhitePixels > GetWhitePixelsRef+100 && !GetSampleFound)
+            {
+                Console.WriteLine("potreba posunu po ose Z");
+                this.sampleFound = true;
+                this.pixelsDiff = pixelsDiff;
+                return;
+            } 
+            else if (pixelsDiff > this.pixelsDiff && GetSampleFound) 
+            {
+                this.sampleShiftZ = -GetSampleShiftZ;
+                this.sampleFound = false;
+                Console.WriteLine("zapotrebi opacneho posunu po ose Z:" + GetSampleShiftZ);
+                return;
+            }
+            else
+            {
+                Console.WriteLine("potreba posunout vzorek");
+                this.sampleFound = false;
+                return;
+            }
+            
         }
         else if (GetNumOfFirstSpots +1 == GetNumOfSpots)
         {
+            this.sampleFound = true;
             List<int> tempDistances = new List<int>();
 
             foreach (Spot sp in GetSpots)
@@ -161,7 +208,6 @@ public class OpticalElementsAligner
                     (-img.Width  / 2)/px + "mm doleva"
                 };
                 Console.WriteLine("posunte vzorek o " + shiftInfo[GetWhiteBorder - 1]);
-                this.sampleFound = false;
                 return;
             }
         }
@@ -202,13 +248,13 @@ public class OpticalElementsAligner
         //RV radius sample
         //RC radius center
         //zValue set by default
-
+        Console.WriteLine(RV + " " + RVS);
         float zDistance = ZS * (RC - RVS) / (RV - RVS);
      
         this.sampleSpot = new Spot(sampleSpot.GetCoordX, sampleSpot.GetCoordY, sampleSpot.GetRadius, zDistance);
     }
 
-    protected void LoadSpots(Mat img)
+    protected int LoadSpots(Mat img)
     {
         List<Spot> spots = new List<Spot>();
 
@@ -217,9 +263,9 @@ public class OpticalElementsAligner
             Console.WriteLine("LoadSpots: img je null nebo empty");
             this.spots = spots;
             this.numOfSpots = 0;
-            return;
+            return 0;
         }
-        Mat bin = BinaryImg(img);
+        (Mat bin, int whitePixels) = BinaryImg(img);
         Cv2.FindContours(
             bin,
             out Point[][] contours,
@@ -251,9 +297,10 @@ public class OpticalElementsAligner
                 spots.Add(new Spot(xImg, yImg, radiusPx, 0f));
             }
         }
-
+        
         this.numOfSpots = numOfSpots;
         this.spots = spots;
+        return whitePixels;
     }
 
 
@@ -272,43 +319,32 @@ public class OpticalElementsAligner
     }
 
 
-    protected Mat BinaryImg(Mat img)
+    protected (Mat,int) BinaryImg(Mat img)
     {
-        
         Mat g = ToGray(img);
 
-        Mat tmp = new Mat();
-        Cv2.Threshold(g, tmp, 1, 255, ThresholdTypes.Binary);
-        int nnzGt1 = Cv2.CountNonZero(tmp);
+        Mat blur = new Mat();
+        Cv2.GaussianBlur(g, blur, new Size(5, 5), 0);
 
         Mat bw = new Mat();
+        Cv2.Threshold(blur, bw, 20, 255, ThresholdTypes.Binary);
 
-        Mat labels = new Mat();
+        Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5));
+        Mat cleaned = new Mat();
+        Cv2.MorphologyEx(bw, cleaned, MorphTypes.Open, kernel);
+        Cv2.MorphologyEx(cleaned, cleaned, MorphTypes.Close, kernel);
 
-        for (int th = 1; th <= 255; th++)
-        {
-            Cv2.Threshold(g, bw, th, 255, ThresholdTypes.Binary);
-            int count = Cv2.CountNonZero(bw);
+        Mat result = AreaOpen(cleaned, 20);
+        whitePixels = Cv2.CountNonZero(result);
 
-            if (count < 15000)
-            {
-                break;
-            }
-        }
-        Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(7, 7));
-        Mat dilated = new Mat();
-        Cv2.Dilate(bw, dilated, kernel, iterations: 2);
-
-        Mat cleaned = AreaOpen(dilated, 20);
-
-        ShowImage(cleaned);
-
-        kernel.Dispose();
-        dilated.Dispose();
-        bw.Dispose();
+        ShowImage(result);
         g.Dispose();
+        blur.Dispose();
+        bw.Dispose();
+        kernel.Dispose();
+        cleaned.Dispose();
 
-        return cleaned;
+        return (result,whitePixels);
     }
 
 
@@ -344,6 +380,7 @@ public class OpticalElementsAligner
 
         return cleaned;
     }
+
     protected void ShowImage(Mat img)
     {
         if (img == null || img.Empty())
@@ -358,6 +395,7 @@ public class OpticalElementsAligner
         Cv2.ImShow("Reference", small);
         Cv2.WaitKey();
     }
+
     protected void FindWhiteBorder(Mat img)
     {
         if (img == null || img.Empty())
@@ -366,7 +404,7 @@ public class OpticalElementsAligner
             return;
         }
 
-        Mat bw = BinaryImg(img);
+        (Mat bw, int whitePixels) = BinaryImg(img);
 
         int rows = bw.Rows;
         int cols = bw.Cols;

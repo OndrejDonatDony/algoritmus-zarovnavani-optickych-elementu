@@ -148,15 +148,16 @@ namespace OpticalElementsSimulator.SimulatorUtils
         {
             List<Spot> spots = new List<Spot>();
             (int dx, int dy)[] N8;
-
+          
             if (border > 0)
             {
+                int i = 4;
                 N8 = new (int dx, int dy)[]
                  {
-                    (0,imageSampleTrim.Height / 2),
-                    (0,-imageSampleTrim.Height / 2),
-                    ( imageSampleTrim.Width  / 2,0),
-                    (-imageSampleTrim.Width  / 2,0)
+                    (0,imageSampleTrim.Height / i),
+                    (0,-imageSampleTrim.Height / i),
+                    ( imageSampleTrim.Width  / i,0),
+                    (-imageSampleTrim.Width  / i,0)
                 };
                 this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[border-1].dx,
                     sampleSpot.GetCoordY + N8[border-1].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
@@ -210,7 +211,13 @@ namespace OpticalElementsSimulator.SimulatorUtils
 
                     if (d2 <= r2)
                     {
-                        double value = 255.0 * Math.Exp(-1.0 * d2 / (radius * radius)) / (rnd.Next(1, 3))*Math.Sqrt(radius/10)/(radius/10);
+                        double value = 255.0 * Math.Exp(-1.0 * d2 / (radius * radius))
+                        / (rnd.Next(1, 3)) * Math.Sqrt(radius / 10.0) / (radius / 10.0);
+
+                        // ořez na minimum
+                        if (value < GetNoise)
+                            value = GetNoise;
+
                         img.Set(y, x, (byte)value);
                     }
                 }

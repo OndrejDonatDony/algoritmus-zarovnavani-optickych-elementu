@@ -58,7 +58,7 @@ class Program
         //Console.WriteLine("nastav posun Z");
         //String shiftZCommand = Console.ReadLine();
         //aligner.GetSampleShiftZ = int.Parse(shiftZCommand);
-        aligner.GetSampleShiftZ = 20;
+        aligner.GetSampleShiftZ = 50;
 
         //sim
         var sim = new SimulatorUtils();
@@ -133,19 +133,22 @@ class Program
 
                 case AlignState.SampleImage:
                     aligner.SampleSpot(sim.GetImageSampleTrim, ZS);
-                    if (aligner.GetSampleFound)
+                    if (aligner.GetWhiteBorder > 0)
+                    {
+                        Console.WriteLine(aligner.SampleMoveXY());
+                        sw = AlignState.AlignXY;
+                        break;
+                    }
+                    else if (aligner.GetSampleFound)
                     {
                         sw = AlignState.AlignZ;
                         break;
                     }
-                    else if (aligner.GetWhiteBorder < 1)
-                    {
-                        Console.WriteLine(aligner.SampleMoveXY());
-                    }
-                    sw = AlignState.AlignXY;
                     break;
+                   
 
                 case AlignState.AlignXY:
+                    Console.WriteLine("hmm");
                     //posun, chovani interferometru vs simulace, mm? pouze img jako vstup, 
                     sim.SimSampleMoveXY(aligner.GetSampleShiftXY,aligner.GetStateOfPosition, aligner.GetWhiteBorder);
                     sw = AlignState.SampleImage;
@@ -173,10 +176,16 @@ class Program
                       sim.GetImageSampleTrim.Height);
 
                     aligner.SampleSpot(sim.GetImageSampleTrim, ZS);
-                    sw = AlignState.Test;
-
-                  
+                    if(aligner.GetSampleFound &&  aligner.GetWhiteBorder == 0)
+                    {
+                        sw = AlignState.Test;
+                    }
+                    else
+                    {
+                        sw = AlignState.AlignXY;
+                    }
                     break;
+
 
                 case AlignState.Test:
                     //vzit v potaz zakazanou oblast a odecist od souradnic
