@@ -26,5 +26,5 @@ public class Spot
     public float GetCoordZ { get { return coordZ; } }
     
     public int GetRadius { get { return radius; } }
-    
+
 }

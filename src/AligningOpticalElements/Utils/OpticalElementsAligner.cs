@@ -2,154 +2,207 @@
 
 namespace AligningOpticalElements;
 
+public enum AlignError
+{
+    Ok,
+    NoSpots,
+    TooManySpots,
+    RefNotFound,
+    SampleNotFound,
+    SampleOnEdge,
+    MissingZ
+}
+
+public enum SpotKeyA
+{
+    RefSpot,
+    SampleSpot,
+    SampleSpotShiftZ
+}
+
 public class OpticalElementsAligner
 {
-    private List<Spot> spots;
-    private int numOfSpots;
+  
 
-    private Spot sampleSpot;
-    private Spot refSpot;
-    private Spot sampleSpotShiftZ = null;
+    private List<Spot> spots = new();
+    private Dictionary<SpotKeyA, Spot> spotMap = new();
+
+    private int numOfSpots;
+    private int numOfFirstSpots;
+
     private int sampleShiftZ = 0;
     private int sampleShiftXY = 0;
+
     private int whitePixels;
     private int whitePixelsRef;
     private int pixelsDiff;
 
-    private List<Spot> sampleSpots;
-    private List<int> distances;
+    private List<int> distances = new();
     private bool sampleFound;
     private int stateOfPosition = -1;
-    private int numOfFirstSpots;
     private float px = 5.248f;
     private int whiteBorder = -1;
-    public Spot GetRefSpot { get { return refSpot; } }
-    public Spot GetSampleSpot { get { return sampleSpot; } }
-    public int GetNumOfFirstSpots { get { return numOfFirstSpots; } }
-    public int GetNumOfSpots { get { return numOfSpots; } }
-    public List<Spot> GetSpots { get { return spots; } }
-    public List<Spot> GetSampleSpots { get { return sampleSpots; } }
-    public Spot GetSampleSpotShiftZ { get { return sampleSpotShiftZ; } }
-    public List<int> GetDistances { get { return distances; } }
-    public bool GetSampleFound { get { return sampleFound; } }
-    public int GetStateOfPosition { get { return stateOfPosition; } }
-    public int GetWhiteBorder { get { return whiteBorder; } }
-    public int GetWhitePixels { get { return whitePixels; } }
-    public int GetWhitePixelsRef { get { return whitePixelsRef; } }
-    public int GetPixelsDiff { get { return pixelsDiff; } }
+    private AlignError evaluation;
+
+    public IReadOnlyList<Spot> GetSpots => spots;
+    public IReadOnlyDictionary<SpotKeyA, Spot> GetSpotMap => spotMap;
+    public List<int> GetDistances => distances;
+    public bool GetSampleFound => sampleFound;
+    public int GetStateOfPosition => stateOfPosition;
+    public int GetWhiteBorder => whiteBorder;
+    public int GetWhitePixels => whitePixels;
+    public int GetPixelsDiff => pixelsDiff;
+
+    public Spot GetRefSpot => spotMap.TryGetValue(SpotKeyA.RefSpot, out var s) ? s : null;
+    public Spot GetSampleSpot => spotMap.TryGetValue(SpotKeyA.SampleSpot, out var s) ? s : null;
+    public Spot GetSampleSpotShiftZ => spotMap.TryGetValue(SpotKeyA.SampleSpotShiftZ, out var s) ? s : null;
+
+    public AlignError GetEvaluation
+    {
+        get => evaluation;
+        set => evaluation = value;
+    }
+
     public float GetPx
     {
         get => px;
         set => px = value;
     }
+
     public int GetSampleShiftXY
     {
         get => sampleShiftXY;
         set => sampleShiftXY = value;
     }
+
     public int GetSampleShiftZ
     {
         get => sampleShiftZ;
         set => sampleShiftZ = value;
     }
-   
 
+    public void AlignTest()
+    {
+        GetEvaluation = AlignError.Ok;
+
+        if (GetSpots.Count == 0)
+        {
+            GetEvaluation = AlignError.NoSpots;
+            return;
+        }
+
+        if (GetSpots.Count > 3)
+        {
+            GetEvaluation = AlignError.TooManySpots;
+            return;
+        }
+
+        if (!spotMap.ContainsKey(SpotKeyA.RefSpot))
+        {
+            GetEvaluation = AlignError.RefNotFound;
+            return;
+        }
+
+        if (!spotMap.ContainsKey(SpotKeyA.SampleSpot))
+        {
+            GetEvaluation = AlignError.SampleNotFound;
+            return;
+        }
+
+        if (GetWhiteBorder > 0)
+        {
+            GetEvaluation = AlignError.SampleOnEdge;
+            return;
+        }
+
+        if (GetSampleSpot.GetCoordZ == 0)
+        {
+            GetEvaluation = AlignError.MissingZ;
+            return;
+        }
+    }
 
     public void ReferenceSpot(Mat img)
     {
-        List<int> distances = new List<int>();
+        LoadSpots(img);
 
-        this.whitePixelsRef = LoadSpots(img);
-        if (GetNumOfSpots == 0)
-        {
-            throw new Exception("nenasly se zadne body");
-        }
-        else if (GetNumOfSpots > 2)
-        {
-            throw new Exception("prilis mnoho bodu");
-        }
+        distances = new List<int>();
 
-        foreach (Spot sp in GetSpots)
+        foreach (Spot sp in spots)
         {
             int x = img.Width / 2 - sp.GetCoordX;
             int y = img.Height / 2 - sp.GetCoordY;
             distances.Add(x * x + y * y);
         }
 
-        if (GetNumOfSpots == 2)
+        if (spots.Count == 2 && distances[0] > distances[1])
         {
-            if (distances[0] > distances[1])
-            {
-                (spots[0], spots[1]) = (spots[1], spots[0]);
-                (distances[0], distances[1]) = (distances[1], distances[0]);
-            }
+            (spots[0], spots[1]) = (spots[1], spots[0]);
+            (distances[0], distances[1]) = (distances[1], distances[0]);
         }
-        this.numOfFirstSpots = numOfSpots;
-        this.refSpot = spots[0];
-        this.distances = distances;
-    }
 
+        numOfFirstSpots = numOfSpots;
+        whitePixelsRef = whitePixels;
+
+        if (spots.Count > 0)
+        {
+            spotMap[SpotKeyA.RefSpot] = spots[0];
+        }
+    }
 
     public void SampleSpot(Mat img, float ZS)
     {
-        bool sampleFound = false;
+        LoadSpots(img);
 
-        this.whitePixels = LoadSpots(img);
-        Console.WriteLine(GetNumOfFirstSpots + "first");
-        Console.WriteLine(GetNumOfSpots + "all");
+        Console.WriteLine(numOfFirstSpots + " first");
+        Console.WriteLine(numOfSpots + " all");
 
-        if (GetNumOfFirstSpots == GetNumOfSpots)
+        if (numOfFirstSpots == numOfSpots)
         {
             FindWhiteBorder(img);
-            if(GetWhiteBorder > 0)
+
+            if (whiteBorder > 0)
             {
-                int[] arr = new int[]
+                string[] shiftInfo =
                 {
-                    -img.Height / 2,
-                     img.Height / 2,
-                     img.Width / 2,
-                    -img.Width / 2
+                    (-img.Height / 2f / px) + " mm dolu",
+                    ( img.Height / 2f / px) + " mm nahoru",
+                    ( img.Width  / 2f / px) + " mm doprava",
+                    (-img.Width  / 2f / px) + " mm doleva"
                 };
-                string[] shiftInfo = new string[]
-                {
-                    (-img.Height / 2)/px + "mm dolu",
-                    ( img.Height / 2)/px + "mm nahoru",
-                    ( img.Width  / 2)/px + "mm doprava",
-                    (-img.Width  / 2)/px + "mm doleva"
-                };
-                Console.WriteLine("posunte vzorek o " + shiftInfo[GetWhiteBorder - 1]);
+
+                Console.WriteLine("posunte vzorek o " + shiftInfo[whiteBorder - 1]);
                 return;
             }
-      
-            int pixelsDiff = GetWhitePixels - GetWhitePixelsRef;
-            if(GetWhitePixels > GetWhitePixelsRef+100 && !GetSampleFound)
+
+            int currentPixelsDiff = whitePixels - whitePixelsRef;
+
+            if (whitePixels > whitePixelsRef + 100 && !sampleFound)
             {
                 Console.WriteLine("potreba posunu po ose Z");
-                this.sampleFound = true;
-                this.pixelsDiff = pixelsDiff;
-                return;
-            } 
-            else if (pixelsDiff > this.pixelsDiff && GetSampleFound) 
-            {
-                this.sampleShiftZ = -GetSampleShiftZ;
-                this.sampleFound = false;
-                Console.WriteLine("zapotrebi opacneho posunu po ose Z:" + GetSampleShiftZ);
+                sampleFound = true;
+                pixelsDiff = currentPixelsDiff;
                 return;
             }
-            else
-            {
-                Console.WriteLine("potreba posunout vzorek");
-                this.sampleFound = false;
-                return;
-            }
-            
-        }
-        else if (GetNumOfFirstSpots +1 == GetNumOfSpots)
-        {
-            this.sampleFound = true;
-            List<int> tempDistances = new List<int>();
 
-            foreach (Spot sp in GetSpots)
+            if (currentPixelsDiff > pixelsDiff && sampleFound)
+            {
+                sampleShiftZ = -sampleShiftZ;
+                sampleFound = false;
+                Console.WriteLine("zapotrebi opacneho posunu po ose Z: " + sampleShiftZ);
+                return;
+            }
+
+            Console.WriteLine("potreba posunout vzorek");
+            sampleFound = false;
+            return;
+        }
+
+        if (numOfFirstSpots + 1 == numOfSpots)
+        {
+            List<int> tempDistances = new();
+
+            foreach (Spot sp in spots)
             {
                 int x = img.Width / 2 - sp.GetCoordX;
                 int y = img.Height / 2 - sp.GetCoordY;
@@ -158,15 +211,14 @@ public class OpticalElementsAligner
 
             int maxDiff = -1;
             int sampleIndex = -1;
-            int diff;
 
             for (int i = 0; i < tempDistances.Count; i++)
             {
                 int minDiff = int.MaxValue;
 
-                for (int j = 0; j < GetDistances.Count; j++)
+                for (int j = 0; j < distances.Count; j++)
                 {
-                    diff = Math.Abs(tempDistances[i] - GetDistances[j]);
+                    int diff = Math.Abs(tempDistances[i] - distances[j]);
                     if (diff < minDiff)
                     {
                         minDiff = diff;
@@ -179,93 +231,106 @@ public class OpticalElementsAligner
                     sampleIndex = i;
                 }
             }
-            if (GetSampleFound)
-            {
-                
-                FindWhiteBorder(img);
 
-                if (GetWhiteBorder < 1 && sampleIndex >= 0)
+            FindWhiteBorder(img);
+
+            if (whiteBorder < 1 && sampleIndex >= 0)
+            {
+                Console.WriteLine("vzorek se nasel");
+                spotMap[SpotKeyA.SampleSpot] = spots[sampleIndex];
+                spotMap[SpotKeyA.SampleSpotShiftZ] = spots[sampleIndex];
+                sampleFound = true;
+                SampleMoveZ(ZS);
+                return;
+            }
+
+            if (whiteBorder > 0)
+            {
+                string[] shiftInfo =
                 {
-                    Console.WriteLine("vzorek se nasel");
-                    this.sampleSpot = GetSpots[sampleIndex];
-                    this.sampleFound = true;
-                    this.sampleSpotShiftZ = GetSpots[sampleIndex];
-                    SampleMoveZ(ZS);
-                    return;
-                }
-                int[] arr = new int[]
-                {
-                    -img.Height / 2,
-                     img.Height / 2,
-                     img.Width / 2,
-                    -img.Width / 2
+                    (-img.Height / 2f / px) + " mm dolu",
+                    ( img.Height / 2f / px) + " mm nahoru",
+                    ( img.Width  / 2f / px) + " mm doprava",
+                    (-img.Width  / 2f / px) + " mm doleva"
                 };
-                string[] shiftInfo = new string[]
-                {
-                    (-img.Height / 2)/px + "mm dolu",
-                    ( img.Height / 2)/px + "mm nahoru",
-                    ( img.Width  / 2)/px + "mm doprava",
-                    (-img.Width  / 2)/px + "mm doleva"
-                };
-                Console.WriteLine("posunte vzorek o " + shiftInfo[GetWhiteBorder - 1]);
+
+                Console.WriteLine("posunte vzorek o " + shiftInfo[whiteBorder - 1]);
                 return;
             }
         }
 
         Console.WriteLine("neco se pokazilo ve vzorku");
-        this.sampleFound = sampleFound;
+        sampleFound = false;
     }
-
 
     public string SampleMoveXY()
     {
-        this.stateOfPosition = GetStateOfPosition + 1;
-        if(GetStateOfPosition == 9)
+        stateOfPosition++;
+
+        if (stateOfPosition >= 8)
         {
             return "spatne nastaveny posun";
         }
-        int shift = this.sampleShiftXY;
-        (int dx, int dy)[] N8 =
-            {
-                (-shift,-shift), (shift,0), (shift,0),
-                (0, shift),          (0, shift),
-                (-shift, 0), (-shift, 0), (0, -shift)
-            };
 
-        var move = N8[GetStateOfPosition];
+        int shift = sampleShiftXY;
+
+        (int dx, int dy)[] n8 =
+        {
+            (-shift, -shift), (0, -shift), (shift, -shift),
+            (-shift, 0),                     (shift, 0),
+            (-shift, shift),  (0, shift),   (shift, shift)
+        };
+
+        var move = n8[stateOfPosition];
         return $"MOVE {move.dx} {move.dy}";
     }
 
-
     public void SampleMoveZ(float ZS)
     {
+        if (!spotMap.ContainsKey(SpotKeyA.SampleSpotShiftZ) ||
+            !spotMap.ContainsKey(SpotKeyA.SampleSpot) ||
+            !spotMap.ContainsKey(SpotKeyA.RefSpot))
+        {
+            return;
+        }
 
-        float RVS = sampleSpotShiftZ.GetRadius;
-        float RV = sampleSpot.GetRadius;
-        float RC = refSpot.GetRadius;
+        Spot shifted = spotMap[SpotKeyA.SampleSpotShiftZ];
+        Spot sample = spotMap[SpotKeyA.SampleSpot];
+        Spot reference = spotMap[SpotKeyA.RefSpot];
 
-        //RVS radius sample shifted 
-        //RV radius sample
-        //RC radius center
-        //zValue set by default
-        Console.WriteLine(RV + " " + RVS);
+        float RVS = shifted.GetRadius;
+        float RV = sample.GetRadius;
+        float RC = reference.GetRadius;
+
+        if (Math.Abs(RV - RVS) < 1e-6f)
+        {
+            return;
+        }
+
         float zDistance = ZS * (RC - RVS) / (RV - RVS);
-     
-        this.sampleSpot = new Spot(sampleSpot.GetCoordX, sampleSpot.GetCoordY, sampleSpot.GetRadius, zDistance);
+
+        spotMap[SpotKeyA.SampleSpot] = new Spot(
+            sample.GetCoordX,
+            sample.GetCoordY,
+            sample.GetRadius,
+            zDistance);
     }
 
-    protected int LoadSpots(Mat img)
+    protected void LoadSpots(Mat img)
     {
-        List<Spot> spots = new List<Spot>();
+        List<Spot> foundSpots = new();
 
         if (img == null || img.Empty())
         {
             Console.WriteLine("LoadSpots: img je null nebo empty");
-            this.spots = spots;
-            this.numOfSpots = 0;
-            return 0;
+            spots = foundSpots;
+            numOfSpots = 0;
+            whitePixels = 0;
+            return;
         }
-        (Mat bin, int whitePixels) = BinaryImg(img);
+
+        (Mat bin, int currentWhitePixels) = BinaryImg(img);
+
         Cv2.FindContours(
             bin,
             out Point[][] contours,
@@ -273,7 +338,9 @@ public class OpticalElementsAligner
             RetrievalModes.External,
             ContourApproximationModes.ApproxSimple
         );
-        int numOfSpots = 0;
+
+        int foundCount = 0;
+
         for (int i = 0; i < contours.Length; i++)
         {
             double area = Cv2.ContourArea(contours[i]);
@@ -282,83 +349,76 @@ public class OpticalElementsAligner
             Moments mom = Cv2.Moments(contours[i]);
             if (Math.Abs(mom.M00) < 1e-9) continue;
 
-            // těžiště v obrazových souřadnicích
-            // těžiště v pixelech
             int xImg = (int)Math.Round(mom.M10 / mom.M00);
             int yImg = (int)Math.Round(mom.M01 / mom.M00);
-
-            // poloměr v pixelech (z plochy kontury)
             int radiusPx = (int)Math.Round(Math.Sqrt(area / Math.PI));
 
-            // práh v pixelech
             if (radiusPx >= 2)
             {
-                numOfSpots++;
-                spots.Add(new Spot(xImg, yImg, radiusPx, 0f));
+                foundCount++;
+                foundSpots.Add(new Spot(xImg, yImg, radiusPx, 0f));
             }
         }
-        
-        this.numOfSpots = numOfSpots;
-        this.spots = spots;
-        return whitePixels;
-    }
 
+        numOfSpots = foundCount;
+        spots = foundSpots;
+        whitePixels = currentWhitePixels;
+
+        bin.Dispose();
+    }
 
     protected Mat ToGray(Mat img)
     {
-        // Pokud uz je grayscale, jen vrat kopii
         if (img.Channels() == 1)
         {
             return img.Clone();
         }
 
-        // Jinak preved BGR -> Gray
-        Mat g = new Mat();
+        Mat g = new();
         Cv2.CvtColor(img, g, ColorConversionCodes.BGR2GRAY);
         return g;
     }
 
-
-    protected (Mat,int) BinaryImg(Mat img)
+    protected (Mat, int) BinaryImg(Mat img)
     {
         Mat g = ToGray(img);
 
-        Mat blur = new Mat();
+        Mat blur = new();
         Cv2.GaussianBlur(g, blur, new Size(5, 5), 0);
 
-        Mat bw = new Mat();
+        Mat bw = new();
         Cv2.Threshold(blur, bw, 20, 255, ThresholdTypes.Binary);
 
         Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5));
-        Mat cleaned = new Mat();
+        Mat cleaned = new();
         Cv2.MorphologyEx(bw, cleaned, MorphTypes.Open, kernel);
         Cv2.MorphologyEx(cleaned, cleaned, MorphTypes.Close, kernel);
 
         Mat result = AreaOpen(cleaned, 20);
-        whitePixels = Cv2.CountNonZero(result);
+        int currentWhitePixels = Cv2.CountNonZero(result);
 
         ShowImage(result);
+
         g.Dispose();
         blur.Dispose();
         bw.Dispose();
         kernel.Dispose();
         cleaned.Dispose();
 
-        return (result,whitePixels);
+        return (result, currentWhitePixels);
     }
-
 
     protected Mat AreaOpen(Mat bw, int minArea)
     {
-        Mat labels = new Mat();
-        Mat stats = new Mat();
-        Mat centroids = new Mat();
+        Mat labels = new();
+        Mat stats = new();
+        Mat centroids = new();
 
         int nLabels = Cv2.ConnectedComponentsWithStats(
             bw, labels, stats, centroids,
             PixelConnectivity.Connectivity8, MatType.CV_32S);
 
-        Mat cleaned = new Mat(bw.Size(), MatType.CV_8UC1, Scalar.All(0));
+        Mat cleaned = new(bw.Size(), MatType.CV_8UC1, Scalar.All(0));
 
         for (int label = 1; label < nLabels; label++)
         {
@@ -368,7 +428,7 @@ public class OpticalElementsAligner
                 continue;
             }
 
-            Mat mask = new Mat();
+            Mat mask = new();
             Cv2.InRange(labels, new Scalar(label), new Scalar(label), mask);
             cleaned.SetTo(new Scalar(255), mask);
             mask.Dispose();
@@ -400,60 +460,56 @@ public class OpticalElementsAligner
     {
         if (img == null || img.Empty())
         {
-            this.whiteBorder = -1;
+            whiteBorder = -1;
             return;
         }
 
-        (Mat bw, int whitePixels) = BinaryImg(img);
+        (Mat bw, int _) = BinaryImg(img);
 
         int rows = bw.Rows;
         int cols = bw.Cols;
 
-        // 1 = nahoře
         for (int x = 0; x < cols; x++)
         {
             if (bw.At<byte>(0, x) > 0)
             {
-                this.whiteBorder = 1;
+                whiteBorder = 1;
                 bw.Dispose();
                 return;
             }
         }
 
-        // 2 = dole
         for (int x = 0; x < cols; x++)
         {
             if (bw.At<byte>(rows - 1, x) > 0)
             {
-                this.whiteBorder = 2;
+                whiteBorder = 2;
                 bw.Dispose();
                 return;
             }
         }
 
-        // 3 = vlevo
         for (int y = 0; y < rows; y++)
         {
             if (bw.At<byte>(y, 0) > 0)
             {
-                this.whiteBorder = 3;
+                whiteBorder = 3;
                 bw.Dispose();
                 return;
             }
         }
 
-        // 4 = vpravo
         for (int y = 0; y < rows; y++)
         {
             if (bw.At<byte>(y, cols - 1) > 0)
             {
-                this.whiteBorder = 4;
+                whiteBorder = 4;
                 bw.Dispose();
                 return;
             }
         }
-        this.whiteBorder = 0;
+
+        whiteBorder = 0;
         bw.Dispose();
-        return;
     }
 }

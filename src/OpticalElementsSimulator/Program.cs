@@ -2,6 +2,7 @@
 using OpenCvSharp;
 using OpticalElementsSimulator.SimulatorUtils;
 using System.Text;
+using static AligningOpticalElements.OpticalElementsAligner;
 using static OpenCvSharp.ML.DTrees;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -13,19 +14,20 @@ using static System.Net.Mime.MediaTypeNames;
 
 //819-1639
 //r = 1230
+public enum AlignState
+{
+    MainMenu,
+    SimulationImages,
+    LoadImage,
+    Processing,
+    AlignXY,
+    AlignZ,
+    Test,
+    Error
+}
 class Program
 {
-    public enum AlignState
-    {
-        MainMenu,
-        SimulationImages,
-        ReferenceImage,
-        SampleImage,
-        AlignXY,
-        AlignZ,
-        Test,
-        Error
-    }
+    
 
     static void Main()
     {
@@ -43,11 +45,12 @@ class Program
 
         int noise = 30;
         int rr = 20;
-        int rs = 300;
+        int rs = 60;
         int ZS = 50;
 
         //real
         var aligner = new OpticalElementsAligner();
+  
 
         aligner.GetPx = 5.248f;
 
@@ -62,7 +65,6 @@ class Program
 
         //sim
         var sim = new SimulatorUtils();
-        sim.GetNoise = noise;
         AlignState sw = AlignState.MainMenu;
         bool endProgram = false;
         bool simulation = false;
@@ -83,7 +85,7 @@ class Program
                             Console.WriteLine("simulace spustena");
                             break;
                         case 1:
-                            sw = AlignState.ReferenceImage;
+                            sw = AlignState.LoadImage;
                             Console.WriteLine("interferometr spusten");
                             break;
 
@@ -96,70 +98,89 @@ class Program
                 case AlignState.SimulationImages:
                     simulation = true;
 
-                    sim.ReferenceImageRand(
+                    sim.ImageRandGenerator(
                         hExternal, wExternal,
                         hInternal, wInternal,
                         noise, rr);
 
-                    sim.SampleImageRand(
-                        hExternal, wExternal,
-                        hInternal, wInternal, rs);
+                    sw = AlignState.LoadImage;
+                    break;
 
-                    sw = AlignState.ReferenceImage;
+                case AlignState.LoadImage:
+               
+                    aligner.SampleSpot(sim.GetImages[ImageKey.SampleImageTrim], ZS);                
+                    sw = AlignState.Processing;
+                    break;
 
-                    //nahled
-                    //ShowReferenceImage(sim.GetImageRef, sim.GetSpotRef);
+                case AlignState.Processing:
+
                     ShowSampleImage(
-                        sim.GetImageSample,
-                        sim.GetSpotRef,
-                        sim.GetSpotSample,
-                        sim.GetImageSampleTrim.Width,
-                        sim.GetImageSampleTrim.Height);
+                        sim.GetImages[ImageKey.SampleImage],
+                        sim.GetSpots[SpotKey.RefSpot],
+                        sim.GetSpots[SpotKey.SampleSpot],
+                        sim.GetImages[ImageKey.SampleImageTrim].Width,
+                        sim.GetImages[ImageKey.SampleImageTrim].Height);
 
-                    //ShowReferenceImage(sim.GetImageRefTrim, sim.GetSpotRefTrim);
                     ShowSampleImage(
-                        sim.GetImageSampleTrim,
-                        sim.GetSpotRefTrim,
-                        sim.GetSpotSampleTrim,
-                        sim.GetImageSampleTrim.Width,
-                        sim.GetImageSampleTrim.Height);
+                        sim.GetImages[ImageKey.SampleImageTrim],
+                        sim.GetSpots[SpotKey.RefSpotTrim],
+                        sim.GetSpots[SpotKey.SampleSpotTrim],
+                        sim.GetImages[ImageKey.SampleImageTrim].Width,
+                        sim.GetImages[ImageKey.SampleImageTrim].Height);
 
-                    break;
 
-                case AlignState.ReferenceImage:
-                    aligner.ReferenceSpot(sim.GetImageRefTrim);
-                    sw = AlignState.SampleImage;
-                    break;
-
-                case AlignState.SampleImage:
-                    aligner.SampleSpot(sim.GetImageSampleTrim, ZS);
-                    if (aligner.GetWhiteBorder > 0)
+                    switch (aligner.GetEvaluation)
                     {
-                        Console.WriteLine(aligner.SampleMoveXY());
-                        sw = AlignState.AlignXY;
-                        break;
-                    }
-                    else if (aligner.GetSampleFound)
-                    {
-                        sw = AlignState.AlignZ;
-                        break;
+                        case AlignError.NoSpots:
+                            Console.WriteLine("zadne body");
+                            sw = AlignState.LoadImage;
+                            break;
+
+                        case AlignError.TooManySpots:
+                            Console.WriteLine("prilis mnoho bodu v snimku");
+                            sw = AlignState.LoadImage;
+                            break;
+
+                        case AlignError.RefNotFound:
+                            Console.WriteLine("nenasel se ref bod");
+                            sw = AlignState.LoadImage;
+                            break;
+
+                        case AlignError.SampleNotFound:
+                            Console.WriteLine("nenasel se vzorek");
+                            sw = AlignState.AlignXY;
+                            break;
+
+                        case AlignError.SampleOnEdge:
+                            Console.WriteLine("vzorek se nachazi na strane snimku");
+                            sw = AlignState.AlignXY;
+                            break;
+
+                        case AlignError.MissingZ:
+                            Console.WriteLine("neni zmerena hodnota Z");
+                            sw = AlignState.AlignZ;
+                            break;
+
+                        case AlignError.Ok:
+                            Console.WriteLine("zadne problemy");
+                            sw = AlignState.Test;
+                            break;
                     }
                     break;
-                   
+
 
                 case AlignState.AlignXY:
-                    Console.WriteLine("hmm");
                     //posun, chovani interferometru vs simulace, mm? pouze img jako vstup, 
                     sim.SimSampleMoveXY(aligner.GetSampleShiftXY,aligner.GetStateOfPosition, aligner.GetWhiteBorder);
-                    sw = AlignState.SampleImage;
+                    sw = AlignState.Processing;
 
                     //ShowReferenceImage(sim.GetImageRef, sim.GetSpotRef);
                     ShowSampleImage(
-                        sim.GetImageSample,
-                        sim.GetSpotRef,
-                        sim.GetSpotSample,
-                        sim.GetImageSampleTrim.Width,
-                        sim.GetImageSampleTrim.Height);
+                          sim.GetImages[ImageKey.SampleImage],
+                          sim.GetSpots[SpotKey.RefSpot],
+                          sim.GetSpots[SpotKey.SampleSpot],
+                          sim.GetImages[ImageKey.SampleImageTrim].Width,
+                          sim.GetImages[ImageKey.SampleImageTrim].Height);
 
                     break;
 
@@ -169,27 +190,19 @@ class Program
                     sim.SimSampleMoveZ(ZS);
 
                     ShowSampleImage(
-                      sim.GetImageSample,
-                      sim.GetSpotRef,
-                      sim.GetSpotSample,
-                      sim.GetImageSampleTrim.Width,
-                      sim.GetImageSampleTrim.Height);
+                          sim.GetImages[ImageKey.SampleImage],
+                          sim.GetSpots[SpotKey.RefSpot],
+                          sim.GetSpots[SpotKey.SampleSpot],
+                          sim.GetImages[ImageKey.SampleImageTrim].Width,
+                          sim.GetImages[ImageKey.SampleImageTrim].Height);
 
-                    aligner.SampleSpot(sim.GetImageSampleTrim, ZS);
-                    if(aligner.GetSampleFound &&  aligner.GetWhiteBorder == 0)
-                    {
-                        sw = AlignState.Test;
-                    }
-                    else
-                    {
-                        sw = AlignState.AlignXY;
-                    }
+                    sw = AlignState.Processing;                    
                     break;
 
 
                 case AlignState.Test:
                     //vzit v potaz zakazanou oblast a odecist od souradnic
-                    Result(aligner.GetSampleSpot, sim.GetSpotSample, aligner.GetPx, simulation,
+                    Result(aligner.GetSampleSpot, sim.GetSpots[SpotKey.SampleSpot], aligner.GetPx, simulation,
                         hExternal, wExternal, hInternal, wInternal);
                     endProgram = true;
                     break;
@@ -233,27 +246,6 @@ class Program
             sb.AppendLine($"Průměr: {spot.GetRadius*2/px:F4} mm");
         }
         Console.WriteLine(sb.ToString());
-    }
-
-    public static void ShowReferenceImage(Mat imageRef, Spot spotRef)
-    {
-        using var baseImg = imageRef.Clone();
-        using var img = baseImg.Channels() == 1
-            ? baseImg.CvtColor(ColorConversionCodes.GRAY2BGR)
-            : baseImg.Clone();
-
-        // tečka (ne radius spotu)
-        Cv2.Circle(img,
-            new Point(spotRef.GetCoordX, spotRef.GetCoordY),
-            5,
-            new Scalar(0, 0, 255),
-            -1); // vyplněné
-
-        using var small = new Mat();
-        Cv2.Resize(img, small, new Size(), 0.5, 0.5);
-
-        Cv2.ImShow("Reference", small);
-        Cv2.WaitKey();
     }
 
     public static void ShowSampleImage(Mat imageSample, Spot spotRef, Spot spotSample, int wInternal, int hInternal)

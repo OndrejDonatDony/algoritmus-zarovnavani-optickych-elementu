@@ -1,200 +1,184 @@
 ﻿using AligningOpticalElements;
 using OpenCvSharp;
-using static OpenCvSharp.ML.DTrees;
 
 namespace OpticalElementsSimulator.SimulatorUtils
 {
+    internal enum ImageKey
+    {
+        RefImage,
+        RefImageTrim,
+        SampleImage,
+        SampleImageTrim
+    }
+
+    internal enum SpotKey
+    {
+        RefSpot,
+        ParSpot,
+        SampleSpot,
+        RefSpotTrim,
+        ParSpotTrim,
+        SampleSpotTrim
+
+    }
     internal class SimulatorUtils
     {
-        private Spot refSpot;
-        private Spot sampleSpot;
-        private Spot refTrimSpot;
-        private Spot sampleTrimSpot;
-        private Mat imageRef = new Mat();
-        private Mat imageSample = new Mat();
-        private Mat imageRefTrim = new Mat();
-        private Mat imageSampleTrim = new Mat();
-        private List<Spot> sampleSpots = new List<Spot>();
+        
+        private Dictionary<ImageKey, Mat> images = new();
+        private Dictionary<SpotKey, Spot> spots = new();
         private Random rnd = new Random();
         private int noise;
 
-        public Spot GetSpotRef { get { return refSpot; } }
-        public Spot GetSpotSample { get { return sampleSpot; } }
-        public Spot GetSpotRefTrim { get { return refTrimSpot; } }
-        public Spot GetSpotSampleTrim { get { return sampleTrimSpot; } }
-        public Mat GetImageRef { get { return imageRef; } }
-        public Mat GetImageSample { get { return imageSample; } }
-        public Mat GetImageRefTrim { get { return imageRefTrim; } }
-        public Mat GetImageSampleTrim { get { return imageSampleTrim; } }
-        public List<Spot> GetSampleSpots { get { return sampleSpots; } }
-        public int GetNoise
+        public IReadOnlyDictionary<ImageKey, Mat> GetImages => images;
+        public IReadOnlyDictionary<SpotKey, Spot> GetSpots => spots;
+
+        public void ImageRandGenerator(int hExternal, int wExternal, int hInternal, int wInternal, int noise, int r)
         {
-            get => noise;
-            set => noise = value;
-        }
+            spots.Clear();
+            images.Clear();
 
+            this.noise = noise;
 
+            int wExternalTrim = (wExternal - wInternal) / 2;
+            int hExternalTrim = (hExternal - hInternal) / 2;
 
-        public void ReferenceImageRand(int hExternal, int wExternal, int hInternal, int wInternal, int noise, int r)
-        {
-            var img = new Mat(hExternal, wExternal, MatType.CV_8UC1, Scalar.All(0));
+            int refCoordX = rnd.Next(wExternalTrim, wInternal + wExternalTrim);
+            int refCoordY = rnd.Next(hExternalTrim, hInternal + hExternalTrim);
+            int parCoordX = rnd.Next(wExternalTrim, wInternal + wExternalTrim);
+            int parCoordY = rnd.Next(hExternalTrim, hInternal + hExternalTrim);
 
-           
+            int sampleCoordX = rnd.Next(0, wExternal);
+            int sampleCoordY = rnd.Next(0, hExternal);
 
-            int borderW = (wExternal - wInternal) / 2;
-            int borderH = (hExternal - hInternal) / 2;
+            int xr = wExternal / 2 - refCoordX;
+            int yr = hExternal / 2 - refCoordY;
+            int xp = wExternal / 2 - parCoordX;
+            int yp = hExternal / 2 - parCoordY;
 
-            int refPointX = rnd.Next(borderW, wInternal + borderW);
-            int refPointY = rnd.Next(borderH, hInternal + borderH);
-            int parPointX = rnd.Next(borderW, wInternal + borderW);
-            int parPointY = rnd.Next(borderH, hInternal + borderH);
-
-            int xr = wExternal / 2 - refPointX;
-            int yr = hExternal / 2 - refPointY;
-            int xp = wExternal / 2 - parPointX;
-            int yp = hExternal / 2 - parPointY;
-
-            int radius = rnd.Next(10, r); //polomer
-
-            float refPointZ = 0;
+            int refRadius = rnd.Next(10, r);
 
             if (xr * xr + yr * yr > xp * xp + yp * yp)
             {
-                (refPointX, parPointX) = (parPointX, refPointX);
-                (refPointY, parPointY) = (parPointY, refPointY);
+                (refCoordX, parCoordX) = (parCoordX, refCoordX);
+                (refCoordY, parCoordY) = (parCoordY, refCoordY);
             }
 
-            var roi = new Rect(borderW, borderH, wInternal, hInternal);
-            Spot newRefTrimSpot = new Spot(refPointX - borderW, refPointY - borderH, radius, 0);
-            Spot newRefSpot = new Spot(refPointX, refPointY, radius, refPointZ);
-            Spot newParSpot = new Spot(parPointX, parPointY, radius, refPointZ);
-
-            ImageDesign(newRefSpot, img);
-            ImageDesign(newParSpot, img);
-
-            Mat imgTrim = new Mat(img, roi).Clone();
-
-            this.refSpot = newRefSpot;
-            this.refTrimSpot = newRefTrimSpot;
-            this.imageRef = img;
-            this.imageRefTrim = imgTrim;
-        }
-
-
-        public void SampleImageRand(int hExternal, int wExternal, int hInternal, int wInternal, int r)
-        {
-            Mat imgSamp = this.imageRef.Clone();
-
-            int sampleX = rnd.Next(0, imgSamp.Width);
-            int sampleY = rnd.Next(0, imgSamp.Height);
-            int radius = rnd.Next(10, r); //polomer
-            radius = 300;
+           
+            int sampRadius = 300;
             float sampleZ = rnd.Next(0, 200) - 100;
             if (sampleZ >= 0) sampleZ += 1;
 
-            int borderW = (wExternal - wInternal) / 2;
-            int borderH = (hExternal - hInternal) / 2;
+            spots.Add(SpotKey.RefSpot, new Spot(refCoordX, refCoordY, refRadius, 0));
+            spots.Add(SpotKey.ParSpot, new Spot(parCoordX, parCoordY, refRadius, 0));
+            spots.Add(SpotKey.SampleSpot, new Spot(sampleCoordX, sampleCoordY, sampRadius, sampleZ));
 
-            
-           
-            Spot newSampleTrimSpot = new Spot(sampleX - borderW, sampleY - borderH, radius, 0);
-            Spot newSampleSpot = new Spot(sampleX, sampleY, radius, sampleZ);
+            spots.Add(SpotKey.RefSpotTrim, new Spot(refCoordX - wExternalTrim, refCoordY - hExternalTrim, refRadius, 0));
+            spots.Add(SpotKey.ParSpotTrim, new Spot(parCoordX - wExternalTrim, parCoordY - hExternalTrim, refRadius, 0));
+            spots.Add(SpotKey.SampleSpotTrim, new Spot(sampleCoordX - wExternalTrim, sampleCoordY - hExternalTrim, sampRadius, sampleZ));
 
+            // Ref image
+            images.Add(ImageKey.RefImage, new Mat(hExternal, wExternal, MatType.CV_8UC1, Scalar.All(0)));
+            SpotApplicator(images[ImageKey.RefImage], spots[SpotKey.RefSpot]);
+            SpotApplicator(images[ImageKey.RefImage], spots[SpotKey.ParSpot]);
+            NoiseApplicator(noise, images[ImageKey.RefImage]);
 
-            ImageDesign(newSampleSpot, imgSamp);
-            var roi = new Rect(borderW, borderH, wInternal, hInternal);
-            Mat imgTrim = new Mat(imgSamp, roi).Clone();
+            // Sample image
+            images.Add(ImageKey.SampleImage, images[ImageKey.RefImage].Clone());
+            SpotApplicator(images[ImageKey.SampleImage], spots[SpotKey.SampleSpot]);
+            NoiseApplicator(noise, images[ImageKey.SampleImage]);
 
-            this.sampleSpot = newSampleSpot;
-            this.sampleTrimSpot = newSampleTrimSpot;
-            this.imageSample = imgSamp;
-            this.imageSampleTrim = imgTrim;
+            var roi = new Rect(wExternalTrim, hExternalTrim, wInternal, hInternal);
+
+            // Ref trimmed
+            images.Add(ImageKey.RefImageTrim, new Mat(images[ImageKey.RefImage], roi).Clone());
+
+            // Sample trimmed
+            images.Add(ImageKey.SampleImageTrim, new Mat(images[ImageKey.SampleImage], roi).Clone());
         }
-
-
-        protected void NewSampleImage()
-        {
-            Mat newImageSample = this.imageRef.Clone();
-
-            int wExternal = newImageSample.Width;
-            int hExternal = newImageSample.Height;
-            int wInternal = imageSampleTrim.Width;
-            int hInternal = imageSampleTrim.Height;
-
-            int sampleX = this.sampleSpot.GetCoordX;
-            int sampleY = this.sampleSpot.GetCoordY;
-            int radius = this.sampleSpot.GetRadius;
-            float sampleZ = this.sampleSpot.GetCoordZ;
-           
-            int borderW = (wExternal - wInternal) / 2;
-            int borderH = (hExternal - hInternal) / 2;
-
-            var roi = new Rect(borderW, borderH, wInternal, hInternal);
-            
-            Spot newSampleTrimSpot = new Spot(sampleX - borderW, sampleY - borderH, radius, sampleZ);
-
-            this.sampleSpot = new Spot(sampleX, sampleY, radius, sampleZ);
-            ImageDesign(GetSpotSample, newImageSample);
-            Mat imgTrim = new Mat(newImageSample, roi).Clone();
-
-
-            this.sampleTrimSpot = newSampleTrimSpot;
-            this.imageSample = newImageSample;
-            this.imageSampleTrim = imgTrim;
-        }
-
 
         public void SimSampleMoveXY(int shift, int state, int border)
         {
-            List<Spot> spots = new List<Spot>();
             (int dx, int dy)[] N8;
-          
+
             if (border > 0)
             {
                 int i = 4;
                 N8 = new (int dx, int dy)[]
-                 {
-                    (0,imageSampleTrim.Height / i),
-                    (0,-imageSampleTrim.Height / i),
-                    ( imageSampleTrim.Width  / i,0),
-                    (-imageSampleTrim.Width  / i,0)
+                {
+                    (0,images[ImageKey.SampleImageTrim].Height / i),
+                    (0,-images[ImageKey.SampleImageTrim].Height / i),
+                    (images[ImageKey.SampleImageTrim].Width / i,0),
+                    (-images[ImageKey.SampleImageTrim].Width / i,0)
                 };
-                this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[border-1].dx,
-                    sampleSpot.GetCoordY + N8[border-1].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
+
+                spots[SpotKey.SampleSpot] = new Spot(
+                    spots[SpotKey.SampleSpot].GetCoordX + N8[border - 1].dx,
+                    spots[SpotKey.SampleSpot].GetCoordY + N8[border - 1].dy,
+                    spots[SpotKey.SampleSpot].GetRadius,
+                    spots[SpotKey.SampleSpot].GetCoordZ);
             }
             else
             {
                 N8 = new (int dx, int dy)[]
                 {
-                (-shift, shift), (shift, 0), (shift, 0),
-                (0, -shift),                   (0,-shift),
-                (-shift, 0),  (-shift, 0),  (0, shift)
+                    (-shift, shift), (shift, 0), (shift, 0),
+                    (0, -shift), (0, -shift),
+                    (-shift, 0), (-shift, 0), (0, shift)
                 };
-                Console.WriteLine(state);
-                this.sampleSpot = new Spot(sampleSpot.GetCoordX + N8[state].dx,
-                    sampleSpot.GetCoordY + N8[state].dy, sampleSpot.GetRadius, sampleSpot.GetCoordZ);
-            }
-            NewSampleImage();
-        }
 
+                spots[SpotKey.SampleSpot] = new Spot(
+                    spots[SpotKey.SampleSpot].GetCoordX + N8[state].dx,
+                    spots[SpotKey.SampleSpot].GetCoordY + N8[state].dy,
+                    spots[SpotKey.SampleSpot].GetRadius,
+                    spots[SpotKey.SampleSpot].GetCoordZ);
+            }
+
+            RefreshImage();
+        }
 
         public void SimSampleMoveZ(int ZS)
         {
+            Spot sampleSpot = spots[SpotKey.SampleSpot];
+
             int RV = sampleSpot.GetRadius;
-            int RC = refSpot.GetRadius;
+            int RC = spots[SpotKey.RefSpot].GetRadius;
             float Z = ZS + sampleSpot.GetCoordZ;
-            int RVS = (int)((ZS * RC - Z * RV) / (ZS - Z)); 
-            this.sampleSpot = new Spot(sampleSpot.GetCoordX, sampleSpot.GetCoordY, RVS, sampleSpot.GetCoordZ + ZS);
-            NewSampleImage();
+            int RVS = (int)((ZS * RC - Z * RV) / (ZS - Z));
+
+            spots[SpotKey.SampleSpot] = new Spot(
+                sampleSpot.GetCoordX,
+                sampleSpot.GetCoordY,
+                RVS,
+                sampleSpot.GetCoordZ + ZS);
+
+            RefreshImage();
         }
 
+        private void RefreshImage()
+        {
+            int wExternal = images[ImageKey.RefImage].Width;
+            int hExternal = images[ImageKey.RefImage].Height;
+            int wInternal = images[ImageKey.RefImageTrim].Width;
+            int hInternal = images[ImageKey.RefImageTrim].Height;
 
-        protected void ImageDesign(Spot spot, Mat img)
+            int borderW = (wExternal - wInternal) / 2;
+            int borderH = (hExternal - hInternal) / 2;
+
+            var roi = new Rect(borderW, borderH, wInternal, hInternal);
+
+            images[ImageKey.SampleImage] = images[ImageKey.RefImage].Clone();
+            SpotApplicator(images[ImageKey.SampleImage], spots[SpotKey.SampleSpot]);
+            NoiseApplicator(noise, images[ImageKey.SampleImage]);
+
+            images[ImageKey.SampleImageTrim] = new Mat(images[ImageKey.SampleImage], roi).Clone();
+        }
+
+        private void SpotApplicator(Mat img, Spot spot)
         {
             int radius = spot.GetRadius;
             int pointX = spot.GetCoordX;
             int pointY = spot.GetCoordY;
-        
+
             int r2 = radius * radius;
 
             for (int x = pointX - radius; x <= pointX + radius; x++)
@@ -212,28 +196,26 @@ namespace OpticalElementsSimulator.SimulatorUtils
                     if (d2 <= r2)
                     {
                         double value = 255.0 * Math.Exp(-1.0 * d2 / (radius * radius))
-                        / (rnd.Next(1, 3)) * Math.Sqrt(radius / 10.0) / (radius / 10.0);
-
-                        // ořez na minimum
-                        if (value < GetNoise)
-                            value = GetNoise;
+                            / (rnd.Next(1, 3)) * Math.Sqrt(radius / 10.0) / (radius / 10.0);
 
                         img.Set(y, x, (byte)value);
                     }
                 }
             }
-     
-            //noise 
+        }
+
+        private void NoiseApplicator(int noise, Mat img)
+        {
             for (int i = 0; i < img.Height; i++)
             {
                 for (int j = 0; j < img.Width; j++)
                 {
-                    if (img.At<byte>(i, j) < GetNoise)
+                    if (img.At<byte>(i, j) < noise)
                     {
-                        img.Set(i, j, (byte)rnd.Next(1, GetNoise));
+                        img.Set(i, j, (byte)rnd.Next(1, noise));
                     }
                 }
             }
-        } 
+        }
     }
 }
