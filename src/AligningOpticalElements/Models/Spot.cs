@@ -27,4 +27,9 @@ public class Spot
     
     public int GetRadius { get { return radius; } }
 
+    public Spot Clone()
+    {
+        return new Spot(GetCoordX, GetCoordY, GetRadius, GetCoordZ);
+    }
+
 }

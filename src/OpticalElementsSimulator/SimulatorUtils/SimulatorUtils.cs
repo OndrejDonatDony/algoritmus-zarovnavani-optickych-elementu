@@ -19,7 +19,6 @@ namespace OpticalElementsSimulator.SimulatorUtils
         RefSpotTrim,
         ParSpotTrim,
         SampleSpotTrim
-
     }
     internal class SimulatorUtils
     {
@@ -64,7 +63,7 @@ namespace OpticalElementsSimulator.SimulatorUtils
             }
 
            
-            int sampRadius = 300;
+            int sampRadius = 50;
             float sampleZ = rnd.Next(0, 200) - 100;
             if (sampleZ >= 0) sampleZ += 1;
 
@@ -96,24 +95,40 @@ namespace OpticalElementsSimulator.SimulatorUtils
             images.Add(ImageKey.SampleImageTrim, new Mat(images[ImageKey.SampleImage], roi).Clone());
         }
 
-        public void SimSampleMoveXY(int shift, int state, int border)
+        public void SimSampleMoveXY(int shift, int state, SpotOnBorder border)
         {
             (int dx, int dy)[] N8;
-
-            if (border > 0)
+            state = state - 1;
+            if (border != SpotOnBorder.None)
             {
+                int x = 0;
+                int y = 0;
                 int i = 4;
-                N8 = new (int dx, int dy)[]
-                {
-                    (0,images[ImageKey.SampleImageTrim].Height / i),
-                    (0,-images[ImageKey.SampleImageTrim].Height / i),
-                    (images[ImageKey.SampleImageTrim].Width / i,0),
-                    (-images[ImageKey.SampleImageTrim].Width / i,0)
-                };
 
+                if (border == SpotOnBorder.Left)
+                {
+                    x = images[ImageKey.SampleImageTrim].Width / i;
+                    y = 0;
+
+                }else if(border == SpotOnBorder.Right)
+                {
+                    x = -images[ImageKey.SampleImageTrim].Width / i;
+                    y = 0;
+                }
+                else if(border == SpotOnBorder.Top) 
+                {
+                    x = 0;
+                    y = images[ImageKey.SampleImageTrim].Height / i;
+                }
+                else if (border == SpotOnBorder.Bottom) 
+                {
+                    x = 0;
+                    y = -images[ImageKey.SampleImageTrim].Width / i;
+                }
+                
                 spots[SpotKey.SampleSpot] = new Spot(
-                    spots[SpotKey.SampleSpot].GetCoordX + N8[border - 1].dx,
-                    spots[SpotKey.SampleSpot].GetCoordY + N8[border - 1].dy,
+                    spots[SpotKey.SampleSpot].GetCoordX + x,
+                    spots[SpotKey.SampleSpot].GetCoordY + y,
                     spots[SpotKey.SampleSpot].GetRadius,
                     spots[SpotKey.SampleSpot].GetCoordZ);
             }
@@ -134,9 +149,11 @@ namespace OpticalElementsSimulator.SimulatorUtils
             }
 
             RefreshImage();
+            NoiseApplicator(noise, images[ImageKey.SampleImage]);
+            return;
         }
 
-        public void SimSampleMoveZ(int ZS)
+        public void SimSampleMoveZ(float ZS)
         {
             Spot sampleSpot = spots[SpotKey.SampleSpot];
 
@@ -146,12 +163,14 @@ namespace OpticalElementsSimulator.SimulatorUtils
             int RVS = (int)((ZS * RC - Z * RV) / (ZS - Z));
 
             spots[SpotKey.SampleSpot] = new Spot(
-                sampleSpot.GetCoordX,
-                sampleSpot.GetCoordY,
+                spots[SpotKey.SampleSpot].GetCoordX,
+                spots[SpotKey.SampleSpot].GetCoordY,
                 RVS,
-                sampleSpot.GetCoordZ + ZS);
+                spots[SpotKey.SampleSpot].GetCoordZ + ZS);
 
             RefreshImage();
+            NoiseApplicator(noise, images[ImageKey.SampleImage]);
+            return;
         }
 
         private void RefreshImage()
@@ -170,7 +189,8 @@ namespace OpticalElementsSimulator.SimulatorUtils
             SpotApplicator(images[ImageKey.SampleImage], spots[SpotKey.SampleSpot]);
             NoiseApplicator(noise, images[ImageKey.SampleImage]);
 
-            images[ImageKey.SampleImageTrim] = new Mat(images[ImageKey.SampleImage], roi).Clone();
+            var roiMat = new Mat(images[ImageKey.SampleImage], roi);
+            roiMat.CopyTo(images[ImageKey.SampleImageTrim]);
         }
 
         private void SpotApplicator(Mat img, Spot spot)
