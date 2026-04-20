@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AligningOpticalElements", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpticalElementsSimulator", "..\OpticalElementsSimulator\OpticalElementsSimulator.csproj", "{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpticalElementsInterferometerApp", "..\OpticalElementsInterferometerApp\OpticalElementsInterferometerApp.csproj", "{691E9F5E-ACF5-2AEC-9261-410004EB9EF8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpticalElementsSimulatorApp", "..\SimulatorUI\OpticalElementsSimulatorApp.csproj", "{B14B2E41-DCFE-453E-95BB-41930AFAC761}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{158775B9-D8E5-422B-A2AF-2C63FDF3AE4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{691E9F5E-ACF5-2AEC-9261-410004EB9EF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{691E9F5E-ACF5-2AEC-9261-410004EB9EF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{691E9F5E-ACF5-2AEC-9261-410004EB9EF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{691E9F5E-ACF5-2AEC-9261-410004EB9EF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B14B2E41-DCFE-453E-95BB-41930AFAC761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B14B2E41-DCFE-453E-95BB-41930AFAC761}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B14B2E41-DCFE-453E-95BB-41930AFAC761}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B14B2E41-DCFE-453E-95BB-41930AFAC761}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
